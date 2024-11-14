@@ -39,23 +39,21 @@ soil_type_col <- covtype[, 12:51]
 
 count_ones <- sapply(soil_type_col, function(x) sum(x == 1))
 
-# Create the bar plot
+# barplot
 bar_positions <- barplot(count_ones, names.arg = names(soil_type_col), col = "blue",
                          main = "Soil_type Frequency",
                          xlab = "Columns", ylab = "Frequency", las = 2)  # las = 2 for vertical x-axis labels
 
-# Add the count values on top of each bar
+# Add actual value
 text(bar_positions, count_ones, labels = count_ones, pos = 3, cex = 0.8)  # pos = 3 places text above the bars
 
 
 ############WILDERNESS AREA#################
-# Select columns 11 and 52 to 54
+
 WILDERNESS <- covtype[, c(11, 52:54)]
 
-# Count the number of 1's in each of the selected columns
+# Count the number of 1
 count_ones <- sapply(WILDERNESS, function(x) sum(x == 1))
-
-#names(count_ones) <- c("Wilderness_Area1", "Wilderness_Area2", "Wilderness_Area3", "Wilderness_Area4")
 
 bar_positions <- barplot(count_ones, names.arg = names(count_ones), col = "blue",
                          main = "Wilderness Area Frequency",
@@ -72,7 +70,7 @@ boxplot(Soil_Type3~Cover_Type, data=covtype, main="Cover Type According to Eleva
 #################COVERETYPE AGAINST SOILTYPES#############
 par(mfrow = c(5, 8), mar = c(3, 3, 2, 1))  # Adjust margins if needed
 
-# Loop through columns Soil_Type1 to Soil_Type40
+# Loop through soil type
 for (i in 12:51) {  # Assuming Soil_Type columns are from 12 to 51
   boxplot(covtype[[i]] ~ covtype$Cover_Type, 
           main = paste("Soil_Type", i - 11),  # Adjust title based on the column index
@@ -81,29 +79,28 @@ for (i in 12:51) {  # Assuming Soil_Type columns are from 12 to 51
 
 
 ###############HEATMAP################
-# Install required packages if necessary
+#uncomment these if necessary
 # install.packages("ggplot2")
 # install.packages("reshape2")
 # install.packages("RColorBrewer")
-# Install required packages if necessary
 # install.packages("ggplot2")
 # install.packages("RColorBrewer")
-# Standardize the data (mean=0, sd=1)
+
 
 
 library(ggplot2)
 library(RColorBrewer)
 
-# Compute the correlation matrix for numeric columns only
-cor_matrix <- cor(covtype[, sapply(covtype, is.numeric)])
+# correlation 
+cor_matrix <- cor(covtype)
 
 # Manually convert the correlation matrix to long format
 cor_matrix_melted <- as.data.frame(as.table(cor_matrix))
 
-# Rename the columns for clarity
+# Rename the columns
 colnames(cor_matrix_melted) <- c("Var1", "Var2", "Correlation")
 
-# Plot the heatmap using ggplot2
+# Plot the heatmap
 ggplot(cor_matrix_melted, aes(Var1, Var2, fill = Correlation)) +
   geom_tile() +
   scale_fill_gradientn(colors = rev(brewer.pal(9, "RdBu"))) +
