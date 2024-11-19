@@ -111,3 +111,96 @@ ggplot(cor_matrix_melted, aes(Var1, Var2, fill = Correlation)) +
 ########SCALE###########
 covtype[, 1:10] <- scale(covtype[, 1:10])
 
+
+
+
+
+
+
+
+################BAGGING RANDOM FOREST################
+#install.packages("randomForest") 
+
+library(randomForest)
+
+# Install tidymodels
+#install.packages("tidymodels")
+
+# Load the package
+library(tidymodels)
+
+# Set seed for reproducibility
+set.seed(5)
+
+# Split the dataset into 50% training and 50% testing
+split <- initial_split(covtype, prop = 0.5)
+trainData <- training(split)
+testData <- testing(split)
+trainData$Cover_Type <- as.factor(trainData$Cover_Type)
+testData$Cover_Type <- as.factor(testData$Cover_Type)
+# Define the random forest model with adjusted parameters
+rf_model <- rand_forest(
+  mode = "classification",
+  engine = "randomForest",
+  mtry = 8,            # Adjust mtry to around 7-8 for a larger dataset
+  trees = 150          # Increase trees to balance variance reduction
+)
+
+# Fit the model to your training data (after you’ve done the split)
+rf_fit <- rf_model %>%
+  fit(Cover_Type ~ ., data = trainData)
+
+
+predictions <- predict(rf_fit, new_data = testData)
+
+# Extract the predicted class
+pred_class <- predictions$.pred_class
+
+# Create a tibble with truth and predicted values
+results <- tibble(
+  truth = testData$Cover_Type,
+  estimate = pred_class
+)
+
+# Calculate metrics
+accuracy_metric <- accuracy(results, truth = truth, estimate = estimate)
+precision_metric <- precision(results, truth = truth, estimate = estimate)
+recall_metric <- recall(results, truth = truth, estimate = estimate)
+conf_mat_result <- conf_mat(results, truth = truth, estimate = estimate)
+
+# Show the metrics
+accuracy_metric
+precision_metric
+recall_metric
+conf_mat_result
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
