@@ -119,6 +119,7 @@ covtype[, 1:10] <- scale(covtype[, 1:10])
 
 
 ################BAGGING RANDOM FOREST################
+#INSTALL IF NECESSARY
 #install.packages("randomForest") 
 
 library(randomForest)
@@ -177,18 +178,43 @@ conf_mat_result
 
 
 
+########NAIVE BAYES############ - poor
+#install.packages("h2o")
+library(h2o)
+h2o.init()
+trainData_h2o <- as.h2o(trainData)
+testData_h2o <- as.h2o(testData)
+model_nb <- h2o.naiveBayes(
+  x = 1:(ncol(trainData_h2o) - 1),      # Predictor columns
+  y = "Cover_Type",                     # Target column
+  training_frame = trainData_h2o
+)
+
+
+predictions <- h2o.predict(model_nb, testData_h2o)
+head(predictions)
+
+
+perf <- h2o.performance(model_nb, newdata = testData_h2o)
+print(perf)
 
 
 
+h2o.shutdown(prompt = FALSE)
 
 
 
+################SUPPORT VECTOR MACHINE################
+#INSTALL IF NECESSARY
+#install.packages("kernlab")
+library(kernlab)
 
-
-
-
-
-
+# Train SVM using kernlab (faster for large data)
+classifier <- ksvm(Cover_Type ~ ., 
+                   data = trainData, 
+                   kernel = "rbfdot",  # Radial kernel
+                   C = 1,             # Regularization parameter
+                   prob.model = TRUE) # Enables probability estimates
 
 
 
