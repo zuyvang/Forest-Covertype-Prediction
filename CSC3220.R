@@ -249,15 +249,22 @@ knnModel_fit <- model |> fit(Cover_Type ~ ., data = sampledData)
 
 print(knnModel_fit)
 
-predictions <- predict(knnModel_fit, testData)
-truth <- testData$Cover_Type
-estimate <- predictions$.pred_class
+predictions <- predict(fit, new_data = testData)
+pred_class <- predictions$.pred_class
 
-eval_data <- data.frame(truth = truth, estimate = estimate)
+results <- tibble(
+  truth = testData$Cover_Type,
+  estimate = pred_class
+)
+accuracy_metric <- accuracy(results, truth = truth, estimate = estimate)
+precision_metric <- precision(results, truth = truth, estimate = estimate)
+recall_metric <- recall(results, truth = truth, estimate = estimate)
+conf_mat_result <- conf_mat(results, truth = truth, estimate = estimate)
 
-metrics <- yardstick::metrics(eval_data, truth = truth, estimate = estimate)
-
-print(metrics)
+accuracy_metric
+precision_metric
+recall_metric
+conf_mat_result
 
 
 
