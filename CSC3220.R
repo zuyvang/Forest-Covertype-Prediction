@@ -1,4 +1,31 @@
+#uncomment these if necessary
 #install.packages("tidyverse")
+# install.packages("ggplot2") 
+# install.packages("reshape2")
+# install.packages("RColorBrewer")
+# install.packages("ggplot2")
+# install.packages("RColorBrewer")
+#install.packages("e1071")
+#install.packages("caret")
+#install.packages("dplyr")
+#install.packages("pROC")
+#install.packages("randomForest") 
+#install.packages("tidymodels")
+#install.packages("yardstick")
+#install.packages("kernlab")
+#install.packages("kknn")
+
+library(kknn)
+library(kernlab)
+library(tidymodels)
+library(yardstick)
+library(randomForest)
+library(pROC)
+library(e1071)
+library(caret)
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
 library(tidyverse)
 
 #this line will not work, please manually import data at environment tab
@@ -82,17 +109,7 @@ for (i in 12:51) {  # Assuming Soil_Type columns are from 12 to 51
 
 
 ###############HEATMAP################ - DUY
-#uncomment these if necessary
-# install.packages("ggplot2")
-# install.packages("reshape2")
-# install.packages("RColorBrewer")
-# install.packages("ggplot2")
-# install.packages("RColorBrewer")
 
-
-
-library(ggplot2)
-library(RColorBrewer)
 
 # correlation 
 cor_matrix <- cor(covtype)
@@ -119,21 +136,15 @@ covtype[, 1:10] <- scale(covtype[, 1:10])
 
 
 ################BAGGING RANDOM FOREST################ - DUY
-#INSTALL IF NECESSARY
-#install.packages("randomForest") 
 
-library(randomForest)
+
 
 # Install tidymodels
-install.packages("tidymodels")
-
-
-library(tidymodels)
 
 set.seed(5)
 
 # Split the dataset into 80% training and 20% testing
-split <- initial_split(covtype, prop = 0.8)
+split <- initial_split(covtype, prop = 0.5)
 trainData <- training(split)
 testData <- testing(split)
 
@@ -160,52 +171,33 @@ results <- tibble(
   estimate = pred_class
 )
 
-accuracy_metric <- accuracy(results, truth = truth, estimate = estimate)
-precision_metric <- precision(results, truth = truth, estimate = estimate)
-recall_metric <- recall(results, truth = truth, estimate = estimate)
-conf_mat_result <- conf_mat(results, truth = truth, estimate = estimate)
+accuracy_metric_rf <- accuracy(results, truth = truth, estimate = estimate)
+precision_metric_rf <- precision(results, truth = truth, estimate = estimate)
+recall_metric_rf <- recall(results, truth = truth, estimate = estimate)
+f1_rf <- f_meas(results, truth = truth, estimate = estimate)
+conf_mat_result_rf <- conf_mat(results, truth = truth, estimate = estimate)
 
 # Show  metrics
-accuracy_metric
-precision_metric
-recall_metric
-conf_mat_result
+f1_rf
+accuracy_metric_rf
+precision_metric_rf
+recall_metric_rf
+conf_mat_result_rf
 
 
+# Convert predictions and truth to numeric if necessary
+testData_numeric <- as.numeric(as.factor(testData$Cover_Type))
+pred_prob <- predict(rf_fit, new_data = testData, type = "prob")
 
+# Plot ROC Curve for one class (e.g., class 1 vs others)
+roc_curve <- roc(testData_numeric, pred_prob$.pred_1)
+plot(roc_curve, col = "blue", lwd = 2, main = "ROC Curve")
 
-########NAIVE BAYES############ - DANIEL
-#install.packages("h2o")
-library(h2o)
-h2o.init()
-trainData_h2o <- as.h2o(trainData)
-testData_h2o <- as.h2o(testData)
-model_nb <- h2o.naiveBayes(
-  x = 1:(ncol(trainData_h2o) - 1),      # Predictor columns
-  y = "Cover_Type",                     # Target column
-  training_frame = trainData_h2o
-)
-
-
-predictions <- h2o.predict(model_nb, testData_h2o)
-head(predictions)
-
-
-perf <- h2o.performance(model_nb, newdata = testData_h2o)
-print(perf)
-
-
-
-h2o.shutdown(prompt = FALSE)
 
 
 
 ################SUPPORT VECTOR MACHINE################ - CHANCE
-#INSTALL IF NECESSARY
-install.packages("kernlab")
-library(tidymodels)
-library(tidyverse)
-library(kernlab)
+
 
 # Train SVM using kernlab (faster for large data)
 classifier <- svm_rbf(mode="classification",
@@ -215,7 +207,7 @@ classifier <- svm_rbf(mode="classification",
 sampledData <- trainData %>% sample_n(50000)
 #there is a constant variables
 #remove it with
-sampledData <- sampledData[, !names(sampledData) %in% constant_columns]
+sampledData <- sampledData[, !names(sampledData) %in% "Soil_type18"]
 fit <- workflow() %>%
   add_model(classifier) %>%
   add_formula(Cover_Type ~ .) %>%
@@ -238,11 +230,19 @@ precision_metric
 recall_metric
 conf_mat_result
 
+
+# Convert predictions and truth to numeric if necessary
+testData_numeric <- as.numeric(as.factor(testData$Cover_Type))
+pred_prob <- predict(fit, new_data = testData, type = "prob")
+
+# Plot ROC Curve for one class (e.g., class 1 vs others)
+roc_curve <- roc(testData_numeric, pred_prob$.pred_1)
+plot(roc_curve, col = "blue", lwd = 2, main = "ROC Curve")
+
 ###############KNN####################### - AVERY
-install.packages("kknn")
-library(kknn)
+
 model <- nearest_neighbor(
-  mode = "classification",  
+  mode = "classification",
   neighbors = 7) |> set_engine("kknn") 
 
 knnModel_fit <- model |> fit(Cover_Type ~ ., data = sampledData)
@@ -259,6 +259,7 @@ results <- tibble(
 accuracy_metric <- accuracy(results, truth = truth, estimate = estimate)
 precision_metric <- precision(results, truth = truth, estimate = estimate)
 recall_metric <- recall(results, truth = truth, estimate = estimate)
+f1_rf <- f_meas(results, truth = truth, estimate = estimate)
 conf_mat_result <- conf_mat(results, truth = truth, estimate = estimate)
 
 accuracy_metric
@@ -266,8 +267,38 @@ precision_metric
 recall_metric
 conf_mat_result
 
+eval_data <- data.frame(truth = testData$Cover_Type, estimate = pred_class)
+
+metrics <- yardstick::metrics(eval_data, truth = truth, estimate = estimate)
+print(metrics)
+
+
+# Convert predictions and truth to numeric if necessary
+testData_numeric <- as.numeric(as.factor(testData$Cover_Type))
+pred_prob <- predict(fit, new_data = testData, type = "prob")
+
+# Plot ROC Curve for one class (e.g., class 1 vs others)
+roc_curve <- roc(testData_numeric, pred_prob$.pred_1)
+plot(roc_curve, col = "blue", lwd = 2, main = "ROC Curve")
 
 
 
+########NAIVE BAYES############ - DANIEL
 
+nb_model <- naiveBayes(Cover_Type ~ ., data = trainData)
+
+summary(nb_model)
+predictions <- predict(nb_model, testData)
+
+
+head(predictions)
+
+confusion_matrix <- confusionMatrix(predictions, testData$Cover_Type)
+print(confusion_matrix)
+
+accuracy_nb <- confusion_matrix$overall['Accuracy']
+kap <- confusion_matrix$overall['Kappa']
+
+accuracy_nb
+kap
 
